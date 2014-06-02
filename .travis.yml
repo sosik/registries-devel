@@ -5,3 +5,5 @@ nodejs:
 before_install:
     - "npm install -g grunt-cli"
     - "gem install sass"
+after_success:
+    - coveralls
