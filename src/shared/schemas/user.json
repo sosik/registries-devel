@@ -1,0 +1,15 @@
+{
+	"$schema": "http://json-schema.org/schema#",
+	"id": "uri://registries/user#",
+	"properties": {
+		"firstName": {
+			"type": "string"
+		},
+		"club": {
+			"$objectLink": {
+				"name": "name",
+				"city": "address.city"
+			}
+		}
+	}
+}

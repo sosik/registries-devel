@@ -11,10 +11,11 @@ module.exports = {
 				case 'test': return {
 						cfg: {
 							console: {
-								level: 'warn',
+								level: 'silly',
 								colorize: true,
 								prettyPrint: true,
-								timestamp: false
+								timestamp: false,
+								silent: true
 							},
 						},
 						addLabel: true
