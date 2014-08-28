@@ -1,0 +1,15 @@
+<html ng-app="psuiFormDemo">
+	<head>
+		<script src="lib/angular/angular.js"></script>
+		<script src="js/psui-form-demo.js"></script>
+		<script src="js/psui-form.js"></script>
+	</head>
+	<body ng-controller="psuiFormDemoController">
+		<table>
+			<tr><th>Model</th><th>Schema</th></tr>
+			<tr><td style="background-color: #ffffee;"><pre>{{model|json}}</pre></td>
+				<td style="background-color: #ffffee;"><pre>{{schema|json}}</pre></td></tr>
+		</table>
+		<div psui-form psui-model="model" psui-schema="schema" />
+	</body>
+</html>
