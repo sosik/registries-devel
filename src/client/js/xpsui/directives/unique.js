@@ -22,7 +22,7 @@
 								method : 'POST',
 								url : '/search/' + schemaUtilFactory.encodeUri(schemaUtilFactory.concatUri(options.schema,'search')),
 								data : {
-									criteria : crits,
+									crits : crits,
 									limit: 1
 								}
 							};

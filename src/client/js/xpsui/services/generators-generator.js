@@ -142,7 +142,7 @@
 				method : 'POST',
 				url : '/search/' + schemaUtilFactory.encodeUri(searchSchema),
 				data : {
-					criteria :[{
+					crits :[{
 						f : "baseData.competitionPart.oid",
 						v : entity.id,
 						op : "eq"
