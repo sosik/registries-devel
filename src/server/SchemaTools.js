@@ -213,6 +213,27 @@ var SchemaTools = function() {
 		}
 	};
 
+	function diveAndUpdate(orig, changes) {
+		var props = Object.getOwnPropertyNames(changes);
+		for (var i = 0; i < props.length; ++i) {
+			if (changes[props[i]] === null) {
+				delete orig[props[i]];
+			} else if (typeof changes[props[i]] === 'object') {
+				if (orig.hasOwnProperty(props[i])) {
+					if (typeof orig[props[i]] === 'object') {
+						diveAndUpdate(orig[props[i]], changes[props[i]]);
+					} else {
+						orig[props[i]] = changes[props[i]];
+					}
+				} else {
+					orig[props[i]] = changes[props[i]];
+				}
+			} else {
+				// it is not object neither null, set it
+				orig[props[i]] = changes[props[i]];
+			}
+		}
+	}
 	/**
 	* Internal schema compilation function, Recursively traverses aobject and does
 	* compilation of schema.
@@ -225,9 +246,9 @@ var SchemaTools = function() {
 	*/
 	var self = this;
 	var compileInternal = function(obj) {
-		var p, compiled, refSchema, compiledSchema, errMessage, res, props, propName;
+		var p, i, refSchema, compiledSchema, errMessage, res, props, propName;
 
-		if ( obj && 'object' === typeof obj) {
+		if ( obj && typeof obj === 'object') {
 			// obj is object or array
 			if (Array.isArray(obj)) {
 				// obj is array
@@ -252,6 +273,7 @@ var SchemaTools = function() {
 					}
 
 					refSchema = self.getSchema(obj[schemaConstants.REF_KEYWORD]);
+
 					if (refSchema === null) {
 						// there is no such schema registered
 						errMessage = util.format('Referenced schema not found %s', obj[schemaConstants.REF_KEYWORD]);
@@ -264,11 +286,71 @@ var SchemaTools = function() {
 					if (typeof compiledSchema === 'undefined' || compiledSchema === null) {
 						// ref schema is not compiled
 						log.silly('Referenced schema not compiled %s', obj[schemaConstants.REF_KEYWORD]);
-						return {done:false, val: null};
+						return {done: false, val: null};
 					}
 
 					// we are done with whole object as $ref can be only property
 					return {done: true, val: compiledSchema};
+
+				} else if (obj.hasOwnProperty(schemaConstants.EXTENDS_KEYWORD)) {
+					// extends
+					/*
+					 * HOW EXTENDS WORKS
+					 *
+					 *
+					 */
+					
+					var extendedSchema = self.getSchema(obj[schemaConstants.EXTENDS_KEYWORD]);
+
+					if (extendedSchema === null) {
+						// there is no such schema registered
+						errMessage = util.format('Extended schema not found %s', obj[schemaConstants.EXTENDS_KEYWORD]);
+						log.silly(errMessage);
+						throw new Error(errMessage);
+					}
+
+					compiledSchema = extendedSchema.compiled;
+
+					if (typeof compiledSchema === 'undefined' || compiledSchema === null) {
+						// extended schema is not compiled
+						log.silly('Extended schema not compiled %s', obj[schemaConstants.EXTENDS_KEYWORD]);
+						return {done: false, val: null};
+					}
+
+					// def has to be compiled (def can contain internal refs and extends possibly)
+					var defWOExtend = JSON.parse(JSON.stringify(obj));
+					delete defWOExtend[schemaConstants.EXTENDS_KEYWORD];
+
+					var r = compileInternal(defWOExtend);
+					var compiledDef;
+
+					if (r.done === false) {
+						return {done: false, val: null};
+					} else {
+						compiledDef = r.val;
+					}
+
+					// now we have compiled schema
+					var extended = {};
+
+					// copy everything that is in extended object except things that are null in def
+					//props = Object.getOwnPropertyNames(compiledSchema);
+					//for (i = 0; i < props.length; ++i) {
+					//	if (!(obj.hasOwnProperty(props[i]) && obj[props[i]] === null)) {
+					//		extended[props[i]] = compiledSchema[props[i]];
+					//	}
+					//}
+					//
+					extended = JSON.parse(JSON.stringify(compiledSchema));
+
+
+					diveAndUpdate(extended, compiledDef);
+
+					/*console.log(compiledSchema);
+					console.log(obj);
+					console.log(extended);*/
+					// we are done with extending
+					return {done: true, val: extended};
 				}
 
 
@@ -302,15 +384,16 @@ var SchemaTools = function() {
 	};
 
 	/**
-	* Compiles all registered schemas into one uberSchema and
-	* each schema individually.
-	* Schema compilation means replacing of all $ref objects by instance
-	* of full schema definitioin registered by related uri.
-	*
-	* @method compile
-	*/
+	 * Compiles all registered schemas into one uberSchema and
+	 * each schema individually.
+	 * Schema compilation means replacing of all $ref objects by instance
+	 * of full schema definitioin registered by related uri.
+	 *
+	 * @method compile
+	 */
 	this.compile = function() {
-		for (var schemaUrl in schemasCache) {
+		var schemaUrl;
+		for (schemaUrl in schemasCache) {
 			// first clear previous compilations
 			schemasCache[schemaUrl].compiled = null;
 		}
@@ -318,7 +401,7 @@ var SchemaTools = function() {
 		var allDone = false;
 		while(!allDone) {
 			allDone = true;
-			for (var schemaUrl in schemasCache) {
+			for (schemaUrl in schemasCache) {
 				//TODO implement support for local references
 
 				try {
@@ -326,7 +409,7 @@ var SchemaTools = function() {
 					if (res.done) {
 						schemasCache[schemaUrl].compiled = res.val;
 					} else {
-						log.silly("Schema not parsed completely, next round needed");
+						log.silly('Schema not parsed completely, next round needed');
 						allDone = false;
 					}
 				} catch (e) {
@@ -335,8 +418,6 @@ var SchemaTools = function() {
 				}
 			}
 		}
-
-		resolveExtends(schemasCache);
 
 	};
 
